@@ -59,7 +59,7 @@ function App() {
   return (
     <div>
       <h1>Phonebook</h1>
-      <ContactForm addContact={addContact} />
+      <ContactForm />
       <SearchBox value={filter} onChange={e=> setFilter(e.target.value)}/>
       <ContactList contacts={filteredContacts} />
     
