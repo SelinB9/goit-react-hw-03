@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useState } from 'react';
 import { useFormik, } from 'formik';
 import{nanoid} from 'nanoid';
@@ -6,22 +6,31 @@ import * as Yup from 'yup';
 
 
 
-const Contact= ({name,number}) => {
+const Contact= ({id,name,number,onDelete}) => {
   return (
-    <li>
+    <li style={{ display: "flex", justifyContent: "space-between" ,alignItems: "center", gap: 20, marginBottom: 10 }}>
+      <div>
       <div>{name}</div>
-      <div>{number}</div></li>
+      <div>{number}</div>
+      </div>
+        <button type="button" onClick={()=>onDelete(id)}>Delete</button>
+    </li>
+    
+    
   );
 }
 
-const ContactList = ({ contacts }) => {
+const ContactList = ({ contacts, deleteContact }) => {
   return (
-    <ul style={{listStyle:'none'}}>
-      {contacts.map(contact=>(
-        < Contact key={contact.id} name={contact.name} number={contact.number} />
-      ))}
-    </ul>
-
+    <div>
+      <ul style={{ listStyle: 'none' }}>
+        {contacts.map(contact => (
+          < Contact key={contact.id} name={contact.name} number={contact.number} id={contact.id} onDelete={deleteContact} />
+        ))}
+        
+      </ul>
+      
+    </div>
   );
 }
 
@@ -43,25 +52,34 @@ const ContactForm = ({addContact}) => {
       name: '',
       number: '',
     },
+    validationSchema: Yup.object({
+      name: Yup.string().min(3).max(50).required("Name is required"),
+      number: Yup.string().matches(/^\d+$/, "Only numbers allowed").min(3).max(50).required("Number is required"),
+    }),
     onSubmit: (values, { resetForm }) => {
       addContact({ ...values, id: nanoid() });//3 nokta ile values icerisindeki degerleri aliyoruz ve id ekliyoruz yeni nesne oluşmuş oluyor id de barındıran
       resetForm();
-    }
-  });
+    },
+});
   return (
    <form onSubmit={handleSubmit}>
-   <div>
+      <div>
+        <label style={{display: 'block'}}>Name</label>
       <input
         type="text" name="name"
         value={values.name}
       onChange={handleChange}/>
     </div>
 
-   <div>
-  < input
-  type="number" name="number"
-  value={values.number}
-  onChange={handleChange}/>
+      <div>
+        <label style={{display: 'block'}}>Number</label>
+  < input 
+     type="text" name="number"
+     value={values.number}
+          onChange={handleChange}
+          onKeyPress={(e) => {
+            if (!/[0-9]/.test(e.key)) e.preventDefault();
+          }}/>
       </div>
 
       <button type="submit">Add contact</button>
@@ -74,12 +92,19 @@ const ContactForm = ({addContact}) => {
 
 function App() {
 
-  const [contact, setContact] = useState([
-    { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-    { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-    { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-    { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-  ]);
+  const [contact, setContact] = useState(() => {
+    const savedContact = localStorage.getItem("contactData");
+    return savedContact ? JSON.parse(savedContact) : [
+      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
+      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
+      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
+      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
+    ];
+  });
+ 
+  useEffect(() => {
+    localStorage.setItem("contactData", JSON.stringify(contact));
+  }, [contact]);
 
   const [filter, setFilter] = useState(() => '');
   
@@ -87,13 +112,28 @@ function App() {
     contact.name.toLowerCase().includes(filter.toLowerCase())
   );
 
+  const addContact = newContact => {
+    setContact(prev => [...prev, newContact]);
+  };
+
+  const deleteContact = contactId => {
+    setContact(prev => prev.filter(contact => contact.id !== contactId));
+  }
+  
+
+  /**const addContact = newContact => {
+  setContact(prev => {
+    const nextId = prev.length + 1; // mevcut contact sayısına 1 ekle
+    return [...prev, { ...newContact, id: `id-${nextId}` }];
+  });
+}; */
 
 return (
     <div>
       <h1>Phonebook</h1>
-      <ContactForm />
+    <ContactForm addContact={addContact} />
       <SearchBox value={filter} onChange={e=> setFilter(e.target.value)}/>
-      <ContactList contacts={filteredContacts} />
+      <ContactList contacts={filteredContacts} deleteContact={deleteContact} />
     
     </div>
   );
